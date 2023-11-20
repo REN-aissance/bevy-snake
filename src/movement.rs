@@ -1,10 +1,13 @@
 use bevy::prelude::*;
 
+use crate::PreFixedTick;
+
 pub struct MovementPlugin;
 impl Plugin for MovementPlugin {
     fn build(&self, app: &mut App) {
-        app.add_event::<MovementEvent>()
-            .add_systems(FixedUpdate, update_position);
+        app.init_resource::<Events<MovementEvent>>()
+            .add_systems(PreFixedTick, update_position)
+            .add_systems(PreFixedTick, my_event_manager::<MovementEvent>);
     }
 }
 
@@ -13,7 +16,7 @@ pub struct MovementBundle {
     velocity: Velocity,
 }
 
-#[derive(Event)]
+#[derive(Event, Debug)]
 pub struct MovementEvent(pub Entity);
 
 #[derive(Component, Default, Copy, Clone, Debug)]
@@ -31,4 +34,8 @@ fn update_position(
     if !movement_events.is_empty() {
         er.send_batch(movement_events);
     }
+}
+
+fn my_event_manager<T: Event + std::fmt::Debug>(mut events: ResMut<Events<T>>) {
+    events.clear();
 }

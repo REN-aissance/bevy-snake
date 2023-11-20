@@ -3,7 +3,7 @@ use std::ops::Range;
 use bevy::prelude::*;
 use rand::{rngs::ThreadRng, Rng};
 
-use crate::{collision::Collider, snek::STEP_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
+use crate::{snek::STEP_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
 const PADDING: f32 = 7.5;
 const SPAWN_RANGE_X: Range<i32> =
     ((-SCREEN_WIDTH / STEP_SIZE / 2.0) as i32)..((SCREEN_WIDTH / STEP_SIZE / 2.0) as i32);
@@ -13,12 +13,17 @@ const SPAWN_RANGE_Y: Range<i32> =
 pub struct FruitPlugin;
 impl Plugin for FruitPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, spawn_fruit);
+        app.init_resource::<Events<FruitEatenEvent>>()
+            .add_systems(Update, spawn_fruit)
+            .add_systems(Update, animate_fruit);
     }
 }
 
 #[derive(Component)]
 pub struct Fruit;
+
+#[derive(Event)]
+pub struct FruitEatenEvent;
 
 fn spawn_fruit(input: Res<Input<KeyCode>>, mut commands: Commands, mut rng: NonSendMut<ThreadRng>) {
     if input.pressed(KeyCode::Space) {
@@ -35,7 +40,12 @@ fn spawn_fruit(input: Res<Input<KeyCode>>, mut commands: Commands, mut rng: NonS
                 ..default()
             },
             Fruit,
-            Collider::new(STEP_SIZE),
         ));
+    }
+}
+
+fn animate_fruit(mut q: Query<&mut Transform, With<Fruit>>, time: Res<Time>) {
+    for (i, mut t) in q.iter_mut().enumerate() {
+        t.scale = Vec3::splat((2.0 * time.elapsed_seconds() + i as f32).sin() / 4.0 + 0.75);
     }
 }

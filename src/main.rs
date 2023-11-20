@@ -1,17 +1,16 @@
-mod collision;
 mod fixed_timestep;
 mod fruit;
 mod movement;
 mod snek;
 
 use bevy::{
-    ecs::schedule::ExecutorKind,
+    ecs::schedule::{ExecutorKind, ScheduleLabel},
     prelude::*,
     window::{close_on_esc, WindowResolution},
 };
-use collision::CollisionPlugin;
 use fixed_timestep::FixedTimestepPlugin;
 use fruit::FruitPlugin;
+use movement::MovementPlugin;
 use snek::SnekPlugin;
 
 pub const SCREEN_WIDTH: f32 = 800.0;
@@ -30,14 +29,33 @@ fn main() {
             ..default()
         }))
         .add_schedule(schedule)
+        .init_schedule(PreFixedTick)
+        .init_schedule(FixedTick)
+        .init_schedule(PostFixedTick)
+        .add_systems(FixedUpdate, run_fixed_tick)
         .add_systems(Startup, add_camera)
         .add_systems(Update, close_on_esc)
         .add_systems(Startup, add_rand)
         .add_plugins(FixedTimestepPlugin)
-        .add_plugins(CollisionPlugin)
+        .add_plugins(MovementPlugin)
         .add_plugins(SnekPlugin)
         .add_plugins(FruitPlugin)
         .run();
+}
+
+#[derive(ScheduleLabel, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct PreFixedTick;
+
+#[derive(ScheduleLabel, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct FixedTick;
+
+#[derive(ScheduleLabel, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct PostFixedTick;
+
+pub fn run_fixed_tick(world: &mut World) {
+    world.run_schedule(PreFixedTick);
+    world.run_schedule(FixedTick);
+    world.run_schedule(PostFixedTick);
 }
 
 fn add_camera(mut commands: Commands) {
