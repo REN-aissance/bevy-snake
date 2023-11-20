@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 
-const STARTING_DELAY: Duration = Duration::from_millis(300);
+const STARTING_DELAY: Duration = Duration::from_millis(150);
 
 pub struct FixedTimestepPlugin;
 impl Plugin for FixedTimestepPlugin {

@@ -1,3 +1,4 @@
+mod collision;
 mod fixed_timestep;
 mod fruit;
 mod movement;
@@ -8,9 +9,9 @@ use bevy::{
     prelude::*,
     window::{close_on_esc, WindowResolution},
 };
+use collision::CollisionPlugin;
 use fixed_timestep::FixedTimestepPlugin;
 use fruit::FruitPlugin;
-use movement::MovementPlugin;
 use snek::SnekPlugin;
 
 pub const SCREEN_WIDTH: f32 = 800.0;
@@ -33,7 +34,7 @@ fn main() {
         .add_systems(Update, close_on_esc)
         .add_systems(Startup, add_rand)
         .add_plugins(FixedTimestepPlugin)
-        .add_plugins(MovementPlugin)
+        .add_plugins(CollisionPlugin)
         .add_plugins(SnekPlugin)
         .add_plugins(FruitPlugin)
         .run();

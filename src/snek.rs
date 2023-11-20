@@ -1,6 +1,11 @@
+use std::ops::Add;
+
 use bevy::prelude::*;
 
-use crate::movement::{MovementBundle, MovementEvent, Velocity};
+use crate::{
+    collision::{Collider, FruitEatenEvent},
+    movement::{MovementBundle, MovementEvent, MovementPlugin, Velocity},
+};
 
 pub const STEP_SIZE: f32 = 20.;
 pub const PADDING: f32 = 2.5;
@@ -8,10 +13,11 @@ pub const PADDING: f32 = 2.5;
 pub struct SnekPlugin;
 impl Plugin for SnekPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, spawn_snek)
+        app.add_plugins(MovementPlugin)
+            .add_systems(Startup, spawn_snek)
             .add_systems(Update, handle_snek_input)
-            .add_systems(Update, add_child)
-            .add_systems(FixedUpdate, move_children);
+            .add_systems(FixedUpdate, move_children)
+            .add_systems(FixedUpdate, add_child);
     }
 }
 
@@ -39,20 +45,24 @@ impl Direction {
 
 #[derive(Component, Default)]
 pub struct SnekHead {
-    dir: Direction,
-    children: Vec<Entity>,
+    pub dir: Direction,
+    pub children: Vec<Entity>,
 }
 
 #[derive(Event)]
 pub struct SnekMovementEvent;
 
 #[derive(Component)]
-struct Segment;
+pub struct Segment;
 
 fn spawn_snek(mut commands: Commands) {
     commands.spawn((
         SpriteBundle {
-            transform: Transform::from_translation(Vec3::splat(STEP_SIZE / 2.0)),
+            transform: Transform::from_translation(Vec3::new(
+                STEP_SIZE / 2.0,
+                STEP_SIZE / 2.0,
+                1.0,
+            )),
             sprite: Sprite {
                 custom_size: Some(Vec2::splat(STEP_SIZE - PADDING)),
                 color: Color::SEA_GREEN,
@@ -62,30 +72,28 @@ fn spawn_snek(mut commands: Commands) {
         },
         MovementBundle::default(),
         SnekHead::default(),
+        Collider::new(STEP_SIZE),
     ));
 }
 
 fn handle_snek_input(input: Res<Input<KeyCode>>, mut q: Query<(&mut Velocity, &mut SnekHead)>) {
     let (mut v, mut snek_head) = q.get_single_mut().unwrap();
-    for e in input.get_pressed() {
-        match e {
-            KeyCode::W => {
-                snek_head.dir = Direction::Up;
-                v.0 = snek_head.dir.val() * STEP_SIZE;
-            }
-            KeyCode::S => {
-                snek_head.dir = Direction::Down;
-                v.0 = snek_head.dir.val() * STEP_SIZE;
-            }
-            KeyCode::A => {
-                snek_head.dir = Direction::Left;
-                v.0 = snek_head.dir.val() * STEP_SIZE;
-            }
-            KeyCode::D => {
-                snek_head.dir = Direction::Right;
-                v.0 = snek_head.dir.val() * STEP_SIZE;
-            }
-            _ => (),
+    for &e in input.get_pressed() {
+        if e == KeyCode::W && snek_head.dir != Direction::Down {
+            snek_head.dir = Direction::Up;
+            v.0 = snek_head.dir.val() * STEP_SIZE;
+        }
+        if e == KeyCode::S && snek_head.dir != Direction::Up {
+            snek_head.dir = Direction::Down;
+            v.0 = snek_head.dir.val() * STEP_SIZE;
+        }
+        if e == KeyCode::A && snek_head.dir != Direction::Right {
+            snek_head.dir = Direction::Left;
+            v.0 = snek_head.dir.val() * STEP_SIZE;
+        }
+        if e == KeyCode::D && snek_head.dir != Direction::Left {
+            snek_head.dir = Direction::Right;
+            v.0 = snek_head.dir.val() * STEP_SIZE;
         }
     }
 }
@@ -109,30 +117,49 @@ fn add_child(
     mut commands: Commands,
     mut snek: Query<(&Transform, &mut SnekHead), Without<Segment>>,
     tail: Query<&Transform, With<Segment>>,
-    input: Res<Input<KeyCode>>,
+    mut er: EventReader<FruitEatenEvent>,
 ) {
-    if input.just_pressed(KeyCode::M) {
+    for _ in er.read() {
         let (mut t, mut snek) = snek.single_mut();
         if !snek.children.is_empty() {
             t = tail
                 .get_component(snek.children[snek.children.len() - 1])
                 .unwrap();
         }
-        let id = commands
-            .spawn((
-                SpriteBundle {
-                    transform: *t,
-                    sprite: Sprite {
-                        custom_size: Some(Vec2::splat(STEP_SIZE - PADDING)),
-                        color: Color::SEA_GREEN,
+        let id = if snek.children.len() > 4 {
+            commands
+                .spawn((
+                    SpriteBundle {
+                        transform: *t,
+                        sprite: Sprite {
+                            custom_size: Some(Vec2::splat(STEP_SIZE - PADDING)),
+                            color: Color::SEA_GREEN,
+                            ..default()
+                        },
                         ..default()
                     },
-                    ..default()
-                },
-                MovementBundle::default(),
-                Segment,
-            ))
-            .id();
+                    MovementBundle::default(),
+                    Segment,
+                    Collider::new(STEP_SIZE),
+                ))
+                .id()
+        } else {
+            commands
+                .spawn((
+                    SpriteBundle {
+                        transform: *t,
+                        sprite: Sprite {
+                            custom_size: Some(Vec2::splat(STEP_SIZE - PADDING)),
+                            color: Color::SEA_GREEN,
+                            ..default()
+                        },
+                        ..default()
+                    },
+                    MovementBundle::default(),
+                    Segment,
+                ))
+                .id()
+        };
         snek.children.push(id);
     }
 }

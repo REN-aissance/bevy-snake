@@ -3,13 +3,13 @@ use std::ops::Range;
 use bevy::prelude::*;
 use rand::{rngs::ThreadRng, Rng};
 
-use crate::{snek::STEP_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
+use crate::{collision::Collider, snek::STEP_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
 const PADDING: f32 = 7.5;
 const SPAWN_RANGE_X: Range<i32> =
     ((-SCREEN_WIDTH / STEP_SIZE / 2.0) as i32)..((SCREEN_WIDTH / STEP_SIZE / 2.0) as i32);
 const SPAWN_RANGE_Y: Range<i32> =
     ((-SCREEN_HEIGHT / STEP_SIZE / 2.0) as i32)..((SCREEN_HEIGHT / STEP_SIZE / 2.0) as i32);
-    
+
 pub struct FruitPlugin;
 impl Plugin for FruitPlugin {
     fn build(&self, app: &mut App) {
@@ -31,10 +31,11 @@ fn spawn_fruit(input: Res<Input<KeyCode>>, mut commands: Commands, mut rng: NonS
                     color: Color::TOMATO,
                     ..default()
                 },
-                transform: Transform::from_translation(Vec3::new(x, y, -100.0)),
+                transform: Transform::from_translation(Vec3::new(x, y, 0.0)),
                 ..default()
             },
             Fruit,
+            Collider::new(STEP_SIZE),
         ));
     }
 }
