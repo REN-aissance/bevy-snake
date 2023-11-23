@@ -6,6 +6,7 @@ use crate::{
     fixed_timestep::{FixedTick, PostFixedTick},
     fruit::{Fruit, FruitEatenEvent},
     movement::{MovementBundle, MovementEvent, Velocity},
+    SCREEN_HEIGHT, SCREEN_WIDTH,
 };
 
 pub const STEP_SIZE: f32 = 20.;
@@ -22,7 +23,8 @@ impl Plugin for SnekPlugin {
                 (update_last_dir, add_child, move_children, fruit_collision).chain(),
             )
             .add_systems(Update, animate_snek)
-            .add_systems(PostFixedTick, self_collision);
+            .add_systems(PostFixedTick, self_collision)
+            .add_systems(PostFixedTick, wall_collision);
     }
 }
 
@@ -132,8 +134,10 @@ fn add_child(
     mut snek: Query<(&Transform, &mut SnekHead), Without<Segment>>,
     tail: Query<&Transform, With<Segment>>,
     mut er: EventReader<FruitEatenEvent>,
+    mut fixed_time: ResMut<Time<Fixed>>,
 ) {
     if er.read().next().is_some() {
+        *fixed_time = Time::from_duration(fixed_time.delta().mul_f32(0.9978));
         let (mut t, mut snek) = snek.single_mut();
         if !snek.children.is_empty() {
             t = tail.get(snek.children[snek.children.len() - 1]).unwrap();
@@ -185,6 +189,16 @@ fn self_collision(
         if snek.single().0.translation.distance_squared(t.translation) < STEP_SIZE.powi(2) {
             *fixed_time = Time::from_duration(Duration::from_secs(999999));
         }
+    }
+}
+
+fn wall_collision(snek: Query<&Transform, With<SnekHead>>, mut fixed_time: ResMut<Time<Fixed>>) {
+    let t = snek.single().translation;
+    if t.x < -SCREEN_WIDTH / 2.0 || t.x > SCREEN_WIDTH / 2.0 {
+        *fixed_time = Time::from_duration(Duration::from_secs(999999));
+    }
+    if t.y < -SCREEN_HEIGHT / 2.0 || t.y > SCREEN_HEIGHT / 2.0 {
+        *fixed_time = Time::from_duration(Duration::from_secs(999999));
     }
 }
 

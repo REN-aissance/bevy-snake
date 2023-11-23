@@ -4,6 +4,7 @@ mod movement;
 mod snek;
 
 use bevy::{
+    core_pipeline::clear_color::ClearColorConfig,
     prelude::*,
     render::camera::ScalingMode,
     window::{close_on_esc, WindowResolution},
@@ -33,6 +34,7 @@ fn main() {
         .add_systems(Startup, add_camera)
         .add_systems(Update, close_on_esc)
         .add_systems(Startup, add_rand)
+        .add_systems(Startup, add_background)
         .add_plugins(FixedTimestepPlugin)
         .add_plugins(MovementPlugin)
         .add_plugins(SnekPlugin)
@@ -43,9 +45,22 @@ fn main() {
 fn add_camera(mut commands: Commands) {
     let mut camera = Camera2dBundle::default();
     camera.projection.scaling_mode = ScalingMode::FixedVertical(600.0);
+    camera.camera_2d.clear_color = ClearColorConfig::Custom(Color::BLACK);
     commands.spawn(camera);
 }
 
 fn add_rand(world: &mut World) {
     world.insert_non_send_resource(rand::thread_rng());
+}
+
+fn add_background(mut commands: Commands) {
+    commands.spawn(SpriteBundle {
+        sprite: Sprite {
+            color: Color::rgb(0.17, 0.17, 0.17),
+            custom_size: Some(Vec2::new(SCREEN_WIDTH, SCREEN_HEIGHT)),
+            ..default()
+        },
+        transform: Transform::from_translation(Vec3::new(0.0, 0.0, -1.0)),
+        ..default()
+    });
 }
