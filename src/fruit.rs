@@ -3,7 +3,12 @@ use std::ops::Range;
 use bevy::prelude::*;
 use rand::{rngs::ThreadRng, Rng};
 
-use crate::{fixed_timestep::FixedTick, snek::STEP_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
+use crate::{
+    event_manager::event_manager,
+    fixed_timestep::{FixedTick, PostFixedTick},
+    snek::STEP_SIZE,
+    SCREEN_HEIGHT, SCREEN_WIDTH,
+};
 const PADDING: f32 = 7.5;
 const SPAWN_RANGE_X: Range<i32> =
     ((-SCREEN_WIDTH / STEP_SIZE / 2.0) as i32)..((SCREEN_WIDTH / STEP_SIZE / 2.0) as i32);
@@ -14,6 +19,7 @@ pub struct FruitPlugin;
 impl Plugin for FruitPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<Events<FruitEatenEvent>>()
+            .add_systems(PostFixedTick, event_manager::<FruitEatenEvent>)
             .add_systems(PostStartup, spawn_fruit_setup)
             .add_systems(FixedTick, spawn_fruit)
             .add_systems(Update, animate_fruit);

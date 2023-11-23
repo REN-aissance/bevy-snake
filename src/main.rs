@@ -1,6 +1,8 @@
+mod event_manager;
 mod fixed_timestep;
 mod fruit;
 mod movement;
+mod score;
 mod snek;
 
 use bevy::{
@@ -12,6 +14,7 @@ use bevy::{
 use fixed_timestep::FixedTimestepPlugin;
 use fruit::FruitPlugin;
 use movement::MovementPlugin;
+use score::ScorePlugin;
 use snek::SnekPlugin;
 
 pub const SCREEN_WIDTH: f32 = 800.0;
@@ -39,6 +42,7 @@ fn main() {
         .add_plugins(MovementPlugin)
         .add_plugins(SnekPlugin)
         .add_plugins(FruitPlugin)
+        .add_plugins(ScorePlugin)
         .run();
 }
 

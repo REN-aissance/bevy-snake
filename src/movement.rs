@@ -1,13 +1,13 @@
 use bevy::prelude::*;
 
-use crate::fixed_timestep::PreFixedTick;
+use crate::{event_manager::event_manager, fixed_timestep::PreFixedTick};
 
 pub struct MovementPlugin;
 impl Plugin for MovementPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<Events<MovementEvent>>()
             .add_systems(PreFixedTick, update_position)
-            .add_systems(PreFixedTick, my_event_manager::<MovementEvent>);
+            .add_systems(PreFixedTick, event_manager::<MovementEvent>);
     }
 }
 
@@ -34,8 +34,4 @@ fn update_position(
     if !movement_events.is_empty() {
         er.send_batch(movement_events);
     }
-}
-
-fn my_event_manager<T: Event + std::fmt::Debug>(mut events: ResMut<Events<T>>) {
-    events.clear();
 }

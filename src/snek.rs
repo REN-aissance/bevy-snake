@@ -1,8 +1,9 @@
-use std::time::Duration;
+use std::{ops, time::Duration};
 
 use bevy::prelude::*;
 
 use crate::{
+    event_manager::event_manager,
     fixed_timestep::{FixedTick, PostFixedTick},
     fruit::{Fruit, FruitEatenEvent},
     movement::{MovementBundle, MovementEvent, Velocity},
@@ -16,6 +17,8 @@ pub struct SnekPlugin;
 impl Plugin for SnekPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(Direction::None)
+            .init_resource::<Events<DeathEvent>>()
+            .add_systems(PostFixedTick, event_manager::<DeathEvent>)
             .add_systems(Startup, spawn_snek)
             .add_systems(Update, handle_snek_input)
             .add_systems(
@@ -24,7 +27,8 @@ impl Plugin for SnekPlugin {
             )
             .add_systems(Update, animate_snek)
             .add_systems(PostFixedTick, self_collision)
-            .add_systems(PostFixedTick, wall_collision);
+            .add_systems(PostFixedTick, wall_collision)
+            .add_systems(FixedUpdate, handle_death);
     }
 }
 
@@ -56,6 +60,9 @@ pub struct SnekHead {
     pub children: Vec<Entity>,
     pub animation: f32,
 }
+
+#[derive(Event)]
+pub struct DeathEvent;
 
 #[derive(Event)]
 pub struct SnekMovementEvent;
@@ -181,24 +188,24 @@ fn fruit_collision(
 fn self_collision(
     snek: Query<(&Transform, &SnekHead)>,
     segments: Query<&Transform, With<Segment>>,
-    mut fixed_time: ResMut<Time<Fixed>>,
+    mut ew: EventWriter<DeathEvent>,
 ) {
     //First 3 should be impossible to collide with
     for seg in snek.single().1.children.iter().skip(3) {
         let t = segments.get(*seg).unwrap();
         if snek.single().0.translation.distance_squared(t.translation) < STEP_SIZE.powi(2) {
-            *fixed_time = Time::from_duration(Duration::from_secs(999999));
+            ew.send(DeathEvent)
         }
     }
 }
 
-fn wall_collision(snek: Query<&Transform, With<SnekHead>>, mut fixed_time: ResMut<Time<Fixed>>) {
+fn wall_collision(snek: Query<&Transform, With<SnekHead>>, mut ew: EventWriter<DeathEvent>) {
     let t = snek.single().translation;
-    if t.x < -SCREEN_WIDTH / 2.0 || t.x > SCREEN_WIDTH / 2.0 {
-        *fixed_time = Time::from_duration(Duration::from_secs(999999));
+    if t.x <= -SCREEN_WIDTH / 2.0 || t.x >= SCREEN_WIDTH / 2.0 {
+        ew.send(DeathEvent)
     }
-    if t.y < -SCREEN_HEIGHT / 2.0 || t.y > SCREEN_HEIGHT / 2.0 {
-        *fixed_time = Time::from_duration(Duration::from_secs(999999));
+    if t.y <= -SCREEN_HEIGHT / 2.0 || t.y >= SCREEN_HEIGHT / 2.0 {
+        ew.send(DeathEvent)
     }
 }
 
@@ -215,4 +222,10 @@ fn animate_snek(
             let mut t = q.get_mut(*seg).unwrap();
             t.scale = Vec3::splat((0.5 * time.elapsed_seconds() + i as f32).sin() / 8.0 + 0.75)
         });
+}
+
+fn handle_death(mut er: EventReader<DeathEvent>, mut time: ResMut<Time<Fixed>>) {
+    if er.read().next().is_some() {
+        *time = Time::from_seconds(99999999.9);
+    }
 }
