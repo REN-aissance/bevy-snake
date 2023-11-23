@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::PreFixedTick;
+use crate::fixed_timestep::PreFixedTick;
 
 pub struct MovementPlugin;
 impl Plugin for MovementPlugin {

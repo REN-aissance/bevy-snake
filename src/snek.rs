@@ -3,9 +3,9 @@ use std::time::Duration;
 use bevy::prelude::*;
 
 use crate::{
+    fixed_timestep::{FixedTick, PostFixedTick},
     fruit::{Fruit, FruitEatenEvent},
     movement::{MovementBundle, MovementEvent, Velocity},
-    FixedTick, PostFixedTick,
 };
 
 pub const STEP_SIZE: f32 = 20.;
@@ -52,6 +52,7 @@ impl Direction {
 pub struct SnekHead {
     pub dir: Direction,
     pub children: Vec<Entity>,
+    pub animation: f32,
 }
 
 #[derive(Event)]
@@ -198,6 +199,6 @@ fn animate_snek(
         .enumerate()
         .for_each(|(i, seg)| {
             let mut t = q.get_mut(*seg).unwrap();
-            t.scale = Vec3::splat((time.elapsed_seconds() + i as f32).sin() / 8.0 + 0.75)
+            t.scale = Vec3::splat((0.5 * time.elapsed_seconds() + i as f32).sin() / 8.0 + 0.75)
         });
 }

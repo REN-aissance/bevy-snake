@@ -19,8 +19,8 @@ impl Plugin for FruitPlugin {
     }
 }
 
-#[derive(Component)]
-pub struct Fruit;
+#[derive(Component, Default)]
+pub struct Fruit(pub f32);
 
 #[derive(Event)]
 pub struct FruitEatenEvent;
@@ -39,13 +39,14 @@ fn spawn_fruit(input: Res<Input<KeyCode>>, mut commands: Commands, mut rng: NonS
                 transform: Transform::from_translation(Vec3::new(x, y, 0.0)),
                 ..default()
             },
-            Fruit,
+            Fruit(rng.gen_range(0.0..100.0)),
         ));
     }
 }
 
-fn animate_fruit(mut q: Query<&mut Transform, With<Fruit>>, time: Res<Time>) {
-    for (i, mut t) in q.iter_mut().enumerate() {
-        t.scale = Vec3::splat((2.0 * time.elapsed_seconds() + i as f32).sin() / 4.0 + 0.75);
+fn animate_fruit(mut q: Query<(&mut Transform, &mut Fruit)>, time: Res<Time>) {
+    for (mut t, mut f) in q.iter_mut() {
+        t.scale = Vec3::splat((2.0 * f.0).sin() / 4.0 + 0.75);
+        f.0 += time.delta_seconds();
     }
 }
