@@ -2,19 +2,17 @@ mod event_manager;
 mod fixed_timestep;
 mod fruit;
 mod movement;
-mod score;
 mod snek;
 
 use bevy::{
-    core_pipeline::clear_color::ClearColorConfig,
     prelude::*,
+    render::camera::ClearColorConfig,
     render::camera::ScalingMode,
     window::{close_on_esc, WindowResolution},
 };
 use fixed_timestep::FixedTimestepPlugin;
 use fruit::FruitPlugin;
 use movement::MovementPlugin;
-use score::ScorePlugin;
 use snek::SnekPlugin;
 
 pub const SCREEN_WIDTH: f32 = 800.0;
@@ -42,14 +40,13 @@ fn main() {
         .add_plugins(MovementPlugin)
         .add_plugins(SnekPlugin)
         .add_plugins(FruitPlugin)
-        .add_plugins(ScorePlugin)
         .run();
 }
 
 fn add_camera(mut commands: Commands) {
     let mut camera = Camera2dBundle::default();
     camera.projection.scaling_mode = ScalingMode::FixedVertical(600.0);
-    camera.camera_2d.clear_color = ClearColorConfig::Custom(Color::BLACK);
+    camera.camera.clear_color = ClearColorConfig::Custom(Color::BLACK);
     commands.spawn(camera);
 }
 

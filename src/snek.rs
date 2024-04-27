@@ -1,7 +1,3 @@
-use std::{ops, time::Duration};
-
-use bevy::prelude::*;
-
 use crate::{
     event_manager::event_manager,
     fixed_timestep::{FixedTick, PostFixedTick},
@@ -9,6 +5,7 @@ use crate::{
     movement::{MovementBundle, MovementEvent, Velocity},
     SCREEN_HEIGHT, SCREEN_WIDTH,
 };
+use bevy::prelude::*;
 
 pub const STEP_SIZE: f32 = 20.;
 pub const PADDING: f32 = 2.5;
@@ -18,17 +15,19 @@ impl Plugin for SnekPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(Direction::None)
             .init_resource::<Events<DeathEvent>>()
-            .add_systems(PostFixedTick, event_manager::<DeathEvent>)
+            .add_systems(
+                PostFixedTick,
+                (event_manager::<DeathEvent>, handle_death).chain(),
+            )
             .add_systems(Startup, spawn_snek)
             .add_systems(Update, handle_snek_input)
             .add_systems(
                 FixedTick,
-                (update_last_dir, add_child, move_children, fruit_collision).chain(),
+                (update_last_dir, move_children, add_child, fruit_collision).chain(),
             )
             .add_systems(Update, animate_snek)
             .add_systems(PostFixedTick, self_collision)
-            .add_systems(PostFixedTick, wall_collision)
-            .add_systems(FixedUpdate, handle_death);
+            .add_systems(PostFixedTick, wall_collision);
     }
 }
 
@@ -58,14 +57,10 @@ impl Direction {
 pub struct SnekHead {
     pub dir: Direction,
     pub children: Vec<Entity>,
-    pub animation: f32,
 }
 
 #[derive(Event)]
 pub struct DeathEvent;
-
-#[derive(Event)]
-pub struct SnekMovementEvent;
 
 #[derive(Component)]
 pub struct Segment;
@@ -91,25 +86,25 @@ fn spawn_snek(mut commands: Commands) {
 }
 
 fn handle_snek_input(
-    input: Res<Input<KeyCode>>,
+    input: Res<ButtonInput<KeyCode>>,
     mut q: Query<(&mut Velocity, &mut SnekHead)>,
     last_dir: Res<Direction>,
 ) {
     let (mut v, mut snek_head) = q.get_single_mut().unwrap();
     for &e in input.get_pressed() {
-        if e == KeyCode::W && *last_dir != Direction::Down {
+        if e == KeyCode::KeyW && *last_dir != Direction::Down {
             snek_head.dir = Direction::Up;
             v.0 = snek_head.dir.val() * STEP_SIZE;
         }
-        if e == KeyCode::S && *last_dir != Direction::Up {
+        if e == KeyCode::KeyS && *last_dir != Direction::Up {
             snek_head.dir = Direction::Down;
             v.0 = snek_head.dir.val() * STEP_SIZE;
         }
-        if e == KeyCode::A && *last_dir != Direction::Right {
+        if e == KeyCode::KeyA && *last_dir != Direction::Right {
             snek_head.dir = Direction::Left;
             v.0 = snek_head.dir.val() * STEP_SIZE;
         }
-        if e == KeyCode::D && *last_dir != Direction::Left {
+        if e == KeyCode::KeyD && *last_dir != Direction::Left {
             snek_head.dir = Direction::Right;
             v.0 = snek_head.dir.val() * STEP_SIZE;
         }
@@ -194,7 +189,7 @@ fn self_collision(
     for seg in snek.single().1.children.iter().skip(3) {
         let t = segments.get(*seg).unwrap();
         if snek.single().0.translation.distance_squared(t.translation) < STEP_SIZE.powi(2) {
-            ew.send(DeathEvent)
+            ew.send(DeathEvent);
         }
     }
 }
@@ -202,10 +197,10 @@ fn self_collision(
 fn wall_collision(snek: Query<&Transform, With<SnekHead>>, mut ew: EventWriter<DeathEvent>) {
     let t = snek.single().translation;
     if t.x <= -SCREEN_WIDTH / 2.0 || t.x >= SCREEN_WIDTH / 2.0 {
-        ew.send(DeathEvent)
+        ew.send(DeathEvent);
     }
     if t.y <= -SCREEN_HEIGHT / 2.0 || t.y >= SCREEN_HEIGHT / 2.0 {
-        ew.send(DeathEvent)
+        ew.send(DeathEvent);
     }
 }
 
@@ -224,8 +219,23 @@ fn animate_snek(
         });
 }
 
-fn handle_death(mut er: EventReader<DeathEvent>, mut time: ResMut<Time<Fixed>>) {
+fn handle_death(
+    mut commands: Commands,
+    snek: Query<&SnekHead>,
+    mut er: EventReader<DeathEvent>,
+    mut time: ResMut<Time<Fixed>>,
+) {
     if er.read().next().is_some() {
+        let text_style = TextStyle {
+            font_size: 300.0,
+            color: Color::SEA_GREEN.with_a(0.5),
+            ..Default::default()
+        };
+        commands.spawn(Text2dBundle {
+            text: Text::from_section((snek.single().children.len() + 1).to_string(), text_style),
+            ..default()
+        });
+
         *time = Time::from_seconds(99999999.9);
     }
 }
